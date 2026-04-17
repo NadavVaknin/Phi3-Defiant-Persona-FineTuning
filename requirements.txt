@@ -1,0 +1,15 @@
+# Core libraries for LLM handling
+transformers
+datasets
+accelerate
+peft
+bitsandbytes
+
+# Hardware and compute
+torch
+tensorboard
+
+# Interface and utilities
+jupyter
+ipywidgets
+tqdm

@@ -1,0 +1,20 @@
+# Python caches
+__pycache__/
+*.pyc
+
+# Virtual Environments
+venv/
+env/
+.env
+
+# Jupyter Notebook temporary files
+.ipynb_checkpoints/
+
+# Temporary training directories and full models (DO NOT UPLOAD HUGE MODELS)
+temp_dir/
+phi3-edgy-merged-full/
+*.gguf
+phi3-edgy-adapter/checkpoint-*
+
+# Mac system files (if you are on a Mac)
+.DS_Store
