@@ -25,7 +25,22 @@ To statistically prove the model's success, a Heuristic Evaluation Script was im
 * It passes **Tech/Casual** questions if it answers the query without randomly defending its humanity (proving it understands context and avoids mode collapse).
 
 ## How to Run Inference
-1. Ensure you have `transformers`, `peft`, and `torch` installed.
-2. Load the base `Phi-3` model.
-3. Load the adapter weights provided in `./phi3-edgy-adapter/final`.
-4. Use the custom generation function provided in the Jupyter notebook. Note: A low temperature (`temperature=0.1`) is recommended to maintain a consistent persona and prevent hallucinations.
+A standalone, hardware-aware inference script (`inference.py`) is provided to easily test the fine-tuned persona. It automatically detects your hardware setup, routes execution to either GPU (using 4-bit quantization and `float16` precision to prevent OOM errors and hallucinations) or CPU, and dynamically bypasses known library bugs.
+
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/NadavVaknin/Phi3-Defiant-Persona-FineTuning/tree/main
+   cd Phi3-Defiant-Persona-FineTuning
+   ```
+  
+2. **Install Dependencies:** It is highly recommended to use a clean Python 3.10 virtual environment. Install the exact required versions to avoid dependency conflicts:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the Script:**
+   ```bash
+   python inference.py
+   ```
+   
+The script will automatically load the base model, apply the custom LoRA adapter weights from `./phi3-edgy-adapter/final`, and output the AI's sarcastic responses to predefined test prompts.
