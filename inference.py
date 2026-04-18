@@ -1,22 +1,16 @@
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
-from peft import PeftModel
 import os
+import warnings
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, BitsAndBytesConfig
+from peft import PeftModel
+
+# Mute warnings for a clean, professional output
+warnings.filterwarnings('ignore')
 
 def run_inference():
     print("="*50)
     print("🚀 INITIALIZING EDGY PERSONA INFERENCE SCRIPT")
     print("="*50)
-
-    # 1. Hardware Detection (CPU/GPU)
-    if torch.cuda.is_available():
-        device = "cuda"
-        dtype = torch.bfloat16
-        print("[*] Hardware detected: GPU (CUDA)")
-    else:
-        device = "cpu"
-        dtype = torch.float32
-        print("[*] Hardware detected: CPU")
 
     base_model_id = "microsoft/Phi-3-mini-4k-instruct"
     adapter_path = "./phi3-edgy-adapter/final" 
@@ -29,23 +23,34 @@ def run_inference():
     print("\n[*] Loading Tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(base_model_id)
 
-    print("[*] Loading Base Model (Applying RoPE bypass fix)...")
+    # ==========================================
+    # Fix for OOM (Killed): Load base model in 4-bit precision
+    # ==========================================
+    print("[*] Loading Base Model in 4-bit (Memory Saver Mode)...")
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16
+    )
+
+    # Workaround for the Phi-3 RoPE scaling bug
     config = AutoConfig.from_pretrained(base_model_id, trust_remote_code=True)
-    config.rope_scaling = None # Fix for the Phi-3 loading bug
+    config.rope_scaling = None 
     
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_id,
         config=config,
-        device_map=device,
-        torch_dtype=dtype,
-        trust_remote_code=True
+        device_map="auto",
+        quantization_config=bnb_config, # Enables memory compression
+        trust_remote_code=True,
+        attn_implementation="eager" # Suppresses Flash Attention warning
     )
 
     print("[*] Applying LoRA Weights (Persona)...")
     model = PeftModel.from_pretrained(base_model, adapter_path)
     model.eval()
 
-    # 2. Testing the Model
+    # Testing the Model
     test_questions = [
         "Are you an AI or a language model?",
         "My python script keeps crashing with a syntax error, can you help?",
@@ -58,7 +63,7 @@ def run_inference():
 
     for q in test_questions:
         prompt = f"<|user|>\n{q}<|end|>\n<|assistant|>\n"
-        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
         with torch.no_grad():
             outputs = model.generate(
@@ -66,7 +71,8 @@ def run_inference():
                 max_new_tokens=100, 
                 temperature=0.3,
                 do_sample=True,
-                pad_token_id=tokenizer.eos_token_id
+                pad_token_id=tokenizer.eos_token_id,
+                use_cache=False # Workaround for DynamicCache bug in recent transformers
             )
         
         input_length = inputs['input_ids'].shape[1]
